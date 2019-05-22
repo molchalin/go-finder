@@ -1,8 +1,13 @@
 package main
 
-import "io"
+import (
+	"bufio"
+	"io"
+	"strings"
+)
 
 type FetchFunc func(string) (io.ReadCloser, error)
+
 type Finder struct {
 	fetch FetchFunc
 }
@@ -14,9 +19,27 @@ func NewFinder(fetch FetchFunc) *Finder {
 }
 
 func (f *Finder) FindGo(path string) (int, error) {
-	return 0, nil
+	rc, err := f.fetch(path)
+	if err != nil {
+		return 0, err
+	}
+	defer rc.Close()
+	scanner := bufio.NewScanner(rc)
+	scanner.Split(bufio.ScanWords)
+
+	var count int
+	for scanner.Scan() {
+		count += strings.Count(scanner.Text(), "Go")
+	}
+	return count, scanner.Err()
 }
 
-func (f *Finder) FindAllGo(r io.Reader, w io.Writer) (int, error) {
-	return 0, nil
+type findRet struct {
+	path  string
+	err   error
+	count int
+}
+
+func (f *Finder) findN(k uint, in <-chan string, out chan<- findRet) {
+	return
 }
