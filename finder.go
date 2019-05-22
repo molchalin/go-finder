@@ -2,14 +2,10 @@ package main
 
 import (
 	"bufio"
-	"io"
+	"fmt"
 	"strings"
 	"sync"
 )
-
-type Fetcher interface {
-	Fetch(string) (io.ReadCloser, error)
-}
 
 type Finder interface {
 	FindGo(path string) (int, error)
@@ -49,6 +45,14 @@ type findRet struct {
 	path string
 	err  error
 	n    int
+}
+
+func (r *findRet) String() string {
+	msg := fmt.Sprintf("Count for %s: %d", r.path, r.n)
+	if r.err != nil {
+		msg += fmt.Sprintf(" error: %s", r.err.Error())
+	}
+	return msg
 }
 
 func (f *ParallelFinder) FindN(k uint, in <-chan string) <-chan findRet {

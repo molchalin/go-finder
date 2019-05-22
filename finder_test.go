@@ -3,32 +3,11 @@ package main
 import (
 	"context"
 	"errors"
-	"io"
-	"io/ioutil"
 	"reflect"
 	"strings"
 	"testing"
 	"time"
 )
-
-type fetchMockRet struct {
-	r   io.Reader
-	err error
-}
-
-var _ Fetcher = &fetchMock{}
-
-type fetchMock struct {
-	expected map[string]fetchMockRet
-}
-
-func (m *fetchMock) Fetch(path string) (io.ReadCloser, error) {
-	ret, ok := m.expected[path]
-	if !ok {
-		panic("unexpected input " + path)
-	}
-	return ioutil.NopCloser(ret.r), ret.err
-}
 
 type findGoTC struct {
 	fetch fetchMockRet
@@ -163,5 +142,17 @@ func TestParallel(t *testing.T) {
 	<-ctx.Done()
 	if err := ctx.Err(); err == context.DeadlineExceeded {
 		t.Errorf(err.Error())
+	}
+}
+
+func TestResultMsg(t *testing.T) {
+	res := findRet{
+		path: "/dev/null",
+		err:  errors.New("error"),
+		n:    13,
+	}
+	expected := "Count for /dev/null: 13 error: error"
+	if got := res.String(); got != expected {
+		t.Errorf(`Expected "%s", Got "%s"`, expected, got)
 	}
 }
