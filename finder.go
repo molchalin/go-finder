@@ -4,22 +4,29 @@ import (
 	"bufio"
 	"io"
 	"strings"
+	"sync"
 )
 
-type FetchFunc func(string) (io.ReadCloser, error)
-
-type Finder struct {
-	fetch FetchFunc
+type Fetcher interface {
+	Fetch(string) (io.ReadCloser, error)
 }
 
-func NewFinder(fetch FetchFunc) *Finder {
-	return &Finder{
-		fetch: fetch,
+type Finder interface {
+	FindGo(path string) (int, error)
+}
+
+type FinderImpl struct {
+	fetcher Fetcher
+}
+
+func NewFinder(fetcher Fetcher) Finder {
+	return &FinderImpl{
+		fetcher: fetcher,
 	}
 }
 
-func (f *Finder) FindGo(path string) (int, error) {
-	rc, err := f.fetch(path)
+func (f *FinderImpl) FindGo(path string) (int, error) {
+	rc, err := f.fetcher.Fetch(path)
 	if err != nil {
 		return 0, err
 	}
@@ -34,12 +41,45 @@ func (f *Finder) FindGo(path string) (int, error) {
 	return count, scanner.Err()
 }
 
-type findRet struct {
-	path  string
-	err   error
-	count int
+type ParallelFinder struct {
+	finder Finder
 }
 
-func (f *Finder) findN(k uint, in <-chan string, out chan<- findRet) {
-	return
+type findRet struct {
+	path string
+	err  error
+	n    int
+}
+
+func (f *ParallelFinder) FindN(k uint, in <-chan string) <-chan findRet {
+	out := make(chan findRet)
+	wg := new(sync.WaitGroup)
+	go func() {
+		ch := make(chan string)
+		var cnt uint
+		for v := range in {
+			if cnt < k {
+				wg.Add(1)
+				go func(i uint) {
+					defer func() {
+						wg.Done()
+					}()
+					for path := range ch {
+						n, err := f.finder.FindGo(path)
+						out <- findRet{
+							path: v,
+							err:  err,
+							n:    n,
+						}
+					}
+				}(cnt)
+				cnt++
+			}
+			ch <- v
+		}
+		close(ch)
+		wg.Wait()
+		close(out)
+	}()
+	return out
 }
