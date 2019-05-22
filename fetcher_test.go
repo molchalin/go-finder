@@ -70,3 +70,11 @@ func TestMultiFetcher(t *testing.T) {
 		t.Errorf("Unexpected error. Expected: %v, Got: %v", fetchErr, err)
 	}
 }
+
+func TestHTTPFetcher(t *testing.T) {
+	f := new(HTTPFetcher)
+	_, err := f.Fetch("/dev/null")
+	if err != ErrTryAnother {
+		t.Errorf("Unexpected error. Expected: %v, Got: %v", ErrTryAnother, err)
+	}
+}

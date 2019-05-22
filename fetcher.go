@@ -47,7 +47,7 @@ func (ff *FileFetcher) Fetch(path string) (io.ReadCloser, error) {
 type HTTPFetcher struct{}
 
 func (hf *HTTPFetcher) Fetch(path string) (io.ReadCloser, error) {
-	if _, err := url.Parse(path); err != nil {
+	if u, err := url.ParseRequestURI(path); err != nil || u.Scheme == "" && u.Host == "" {
 		return nil, ErrTryAnother
 	}
 	req, err := http.Get(path)

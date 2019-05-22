@@ -71,7 +71,7 @@ func (f *ParallelFinder) FindN(k uint, in <-chan string) <-chan findRet {
 					for path := range ch {
 						n, err := f.finder.FindGo(path)
 						out <- findRet{
-							path: v,
+							path: path,
 							err:  err,
 							n:    n,
 						}
