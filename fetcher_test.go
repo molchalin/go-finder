@@ -2,8 +2,11 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"io/ioutil"
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 )
@@ -65,16 +68,31 @@ func TestMultiFetcher(t *testing.T) {
 	if strRes != msg {
 		t.Errorf("bad fetch. Expected: %s, Got: %s", msg, strRes)
 	}
-	rc, err = mf.Fetch("path2")
+	_, err = mf.Fetch("path2")
 	if err != fetchErr {
 		t.Errorf("Unexpected error. Expected: %v, Got: %v", fetchErr, err)
 	}
 }
 
 func TestHTTPFetcher(t *testing.T) {
+	msg := "go go"
+	sv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprint(w, msg)
+	}))
+	defer sv.Close()
 	f := new(HTTPFetcher)
 	_, err := f.Fetch("/dev/null")
 	if err != ErrTryAnother {
 		t.Errorf("Unexpected error. Expected: %v, Got: %v", ErrTryAnother, err)
+	}
+	rc, err := f.Fetch(sv.URL)
+	if err != nil {
+		t.Errorf("Unexpected error: %v", err)
+	}
+	defer rc.Close()
+	res, _ := ioutil.ReadAll(rc)
+	strRes := string(res)
+	if strRes != msg {
+		t.Errorf("bad fetch. Expected: %s, Got: %s", msg, strRes)
 	}
 }
